@@ -1,0 +1,2 @@
+pydantic>=2.7,<3
+yara-python>=4.5,<5

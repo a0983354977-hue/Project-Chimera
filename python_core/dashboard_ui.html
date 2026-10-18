@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHIMERA-VISION // 次世代二進位威脅情報戰情室</title>
+<style>
+:root{
+  --bg:#04070c;
+  --panel:rgba(9,15,24,.86);
+  --panel-2:rgba(12,20,32,.72);
+  --line:rgba(34,211,238,.18);
+  --cyan:#22d3ee;
+  --magenta:#ff2e97;
+  --green:#4ade80;
+  --amber:#fbbf24;
+  --red:#ff3b5c;
+  --text:#c3d3e6;
+  --dim:#5b7186;
+  --mono:"Cascadia Code","JetBrains Mono","Fira Code",Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--mono);font-size:13px;line-height:1.45;
+  overflow:hidden;
+  background-image:
+    radial-gradient(circle at 12% 8%,rgba(34,211,238,.10),transparent 42%),
+    radial-gradient(circle at 88% 92%,rgba(255,46,151,.10),transparent 45%),
+    linear-gradient(rgba(34,211,238,.028) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(34,211,238,.028) 1px,transparent 1px);
+  background-size:auto,auto,34px 34px,34px 34px;
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 3px);
+  opacity:.35;
+}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.03)}
+::-webkit-scrollbar-thumb{background:rgba(34,211,238,.28);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(34,211,238,.5)}
+
+/* ---------- shell ---------- */
+#shell{display:flex;flex-direction:column;height:100vh;padding:10px;gap:9px}
+
+/* ---------- header ---------- */
+header{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:9px 14px;border:1px solid var(--line);border-radius:6px;
+  background:linear-gradient(90deg,rgba(34,211,238,.09),rgba(9,15,24,.8) 38%,rgba(255,46,151,.07));
+  box-shadow:0 0 22px rgba(34,211,238,.09) inset;
+}
+.brand{display:flex;align-items:baseline;gap:9px}
+.brand b{
+  font-size:19px;letter-spacing:3px;color:#eafcff;
+  text-shadow:0 0 9px rgba(34,211,238,.85),0 0 24px rgba(34,211,238,.35);
+}
+.brand small{color:var(--magenta);letter-spacing:1.6px;font-size:10px;text-transform:uppercase}
+.spacer{flex:1}
+.metric{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.metric span{font-size:9px;letter-spacing:1.4px;color:var(--dim);text-transform:uppercase}
+.metric b{font-size:17px}
+#threatLabel{font-size:12px;letter-spacing:1px}
+
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot.on{background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2.2s infinite}
+.dot.off{background:var(--red);box-shadow:0 0 10px var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=text],select{
+  background:rgba(4,9,16,.9);border:1px solid var(--line);color:var(--text);
+  padding:7px 10px;border-radius:4px;font-family:var(--mono);font-size:12px;outline:none;
+}
+input[type=text]:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(34,211,238,.16)}
+#pathInput{flex:1;min-width:220px}
+#rulesInput{width:230px}
+button{
+  background:rgba(34,211,238,.10);border:1px solid rgba(34,211,238,.4);color:#cdfbff;
+  padding:7px 14px;border-radius:4px;font-family:var(--mono);font-size:12px;letter-spacing:.6px;
+  cursor:pointer;transition:.16s;white-space:nowrap;
+}
+button:hover{background:rgba(34,211,238,.22);box-shadow:0 0 14px rgba(34,211,238,.35)}
+button:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line);background:transparent}
+button.magenta{border-color:rgba(255,46,151,.45);background:rgba(255,46,151,.10);color:#ffd6ea}
+button.magenta:hover{background:rgba(255,46,151,.2);box-shadow:0 0 14px rgba(255,46,151,.35)}
+button.ghost{border-color:rgba(91,113,134,.5);background:transparent;color:var(--dim);padding:6px 10px}
+button.ghost:hover{color:var(--text);border-color:var(--cyan)}
+
+/* ---------- samples strip ---------- */
+#samples{display:flex;gap:7px;overflow-x:auto;padding:1px 0;min-height:34px;align-items:center}
+.tab{
+  display:flex;align-items:center;gap:8px;padding:5px 11px;border-radius:4px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel-2);white-space:nowrap;color:var(--dim);font-size:11.5px;
+}
+.tab:hover{border-color:rgba(34,211,238,.4);color:var(--text)}
+.tab.active{border-color:var(--cyan);color:#eafcff;background:rgba(34,211,238,.13);box-shadow:0 0 12px rgba(34,211,238,.2)}
+.tab .pill{padding:0 6px;border-radius:8px;font-size:10px;background:rgba(91,113,134,.25)}
+.tab.crit .pill{background:rgba(255,59,92,.25);color:#ffc4ce}
+.tab.high .pill{background:rgba(251,191,36,.22);color:#ffe3a3}
+.tab.mid  .pill{background:rgba(74,222,128,.18);color:#bcf7d1}
+.tab .x{color:var(--dim);font-size:13px;line-height:1}
+.tab .x:hover{color:var(--red)}
+
+/* ---------- grid ---------- */
+.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:9px;min-height:0}
+.panel{
+  display:flex;flex-direction:column;min-height:0;
+  border:1px solid var(--line);border-radius:6px;background:var(--panel);
+  box-shadow:0 0 18px rgba(0,0,0,.5),0 0 18px rgba(34,211,238,.05) inset;
+}
+.panel > h2{
+  margin:0;padding:8px 12px;font-size:11px;letter-spacing:1.7px;text-transform:uppercase;
+  border-bottom:1px solid var(--line);color:var(--cyan);display:flex;align-items:center;gap:9px;
+  background:linear-gradient(90deg,rgba(34,211,238,.09),transparent);
+}
+.panel > h2 .tag{color:var(--dim);letter-spacing:.5px;font-size:10px;text-transform:none}
+.panel > h2 .right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.body{flex:1;overflow:auto;padding:10px 12px;min-height:0}
+
+/* ---------- empty ---------- */
+.empty{color:var(--dim);text-align:center;padding:26px 12px;font-size:12px;letter-spacing:.5px}
+.empty b{color:var(--cyan)}
+
+/* ---------- entropy ---------- */
+.ent-row{display:grid;grid-template-columns:104px 1fr 62px;gap:9px;align-items:center;margin-bottom:7px}
+.ent-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+.ent-track{height:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.ent-fill{height:100%;width:0;border-radius:2px;transition:width .5s cubic-bezier(.2,.8,.3,1);
+  background:linear-gradient(90deg,rgba(34,211,238,.55),var(--cyan))}
+.ent-row.warn .ent-fill{background:linear-gradient(90deg,rgba(251,191,36,.5),var(--amber))}
+.ent-row.danger .ent-fill{background:linear-gradient(90deg,rgba(255,59,92,.5),var(--red));
+  box-shadow:0 0 12px rgba(255,59,92,.65);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.ent-val{text-align:right;font-size:11px;color:var(--dim)}
+.ent-row.danger .ent-val{color:var(--red);font-weight:bold}
+.ent-row.warn .ent-val{color:var(--amber)}
+.flag{font-size:10px;color:var(--red);letter-spacing:.4px}
+
+/* ---------- kill chain ---------- */
+.phase{margin-bottom:10px}
+.phase h4{margin:0 0 5px;font-size:10.5px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase;
+  border-left:2px solid var(--cyan);padding-left:7px}
+.badges{display:flex;flex-wrap:wrap;gap:5px}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:3px;font-size:11px;
+  border:1px solid rgba(34,211,238,.35);background:rgba(34,211,238,.09);color:#d5f7fd;
+}
+.badge .id{color:var(--cyan);font-size:10px;letter-spacing:.5px}
+.badge .cf{font-size:9.5px;color:var(--dim)}
+.badge.hot{border-color:rgba(255,46,151,.5);background:rgba(255,46,151,.10);color:#ffd9ec}
+.badge.hot .id{color:var(--magenta)}
+.ttl{color:var(--dim);font-size:10.5px;margin-bottom:6px}
+
+/* ---------- hunting ---------- */
+.searchbar{display:flex;gap:7px;margin-bottom:8px}
+.searchbar input{flex:1}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th{position:sticky;top:-10px;background:#0a1119;text-align:left;padding:6px 8px;font-size:10px;
+  letter-spacing:1px;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--line)}
+td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.045)}
+tr.risk td{background:rgba(255,59,92,.09);color:#ffc9d2}
+tr.risk td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr.warn td{background:rgba(251,191,36,.07);color:#ffe6b0}
+tr.warn td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.ioc-grid{display:flex;flex-wrap:wrap;gap:6px}
+.ioc{
+  display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:4px;font-size:11px;
+  border:1px solid rgba(255,46,151,.3);background:rgba(255,46,151,.07);max-width:100%;
+}
+.ioc .kind{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--magenta);border-right:1px solid rgba(255,46,151,.3);padding-right:7px}
+.ioc .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+.ioc .cp{cursor:pointer;color:var(--dim);font-size:11px}
+.ioc .cp:hover{color:var(--cyan)}
+.sub-h{margin:12px 0 6px;font-size:10px;letter-spacing:1.4px;color:var(--dim);text-transform:uppercase}
+
+/* ---------- report / drawer ---------- */
+.actions{display:flex;gap:7px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--line)}
+.drawer{flex:1;min-height:0;display:flex;flex-direction:column}
+.drawer h4{margin:0;padding:6px 12px;font-size:9.5px;letter-spacing:1.3px;color:var(--dim);
+  text-transform:uppercase;display:flex;align-items:center;gap:8px}
+#rawlog{flex:1;overflow:auto;margin:0;padding:8px 12px;font-size:10.5px;line-height:1.5;color:#8fb3c7;white-space:pre-wrap;word-break:break-all}
+#rawlog .tx{color:var(--cyan)}
+#rawlog .rx{color:var(--green)}
+#rawlog .er{color:var(--red)}
+.riskbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,.06);margin-top:8px}
+.riskbar i{display:block;height:100%}
+
+/* ---------- drop overlay ---------- */
+#drop{
+  position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;
+  background:rgba(4,7,12,.86);backdrop-filter:blur(3px);
+}
+#drop.on{display:flex}
+#drop .box{
+  border:2px dashed var(--cyan);border-radius:12px;padding:46px 70px;text-align:center;
+  color:#eafcff;font-size:16px;letter-spacing:2px;box-shadow:0 0 40px rgba(34,211,238,.3);
+}
+.overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,7,12,.6);color:var(--cyan);letter-spacing:2px;font-size:12px;z-index:5;border-radius:6px;
+}
+</style>
+</head>
+<body>
+<div id="shell">
+
+  <header>
+    <div class="brand">
+      <b>CHIMERA-VISION</b>
+      <small>binary threat intelligence cockpit</small>
+    </div>
+    <div class="spacer"></div>
+    <div class="metric">
+      <span>risk score</span>
+      <b id="riskScore" style="color:var(--dim)">—</b>
+    </div>
+    <div class="metric">
+      <span>threat label</span>
+      <b id="threatLabel" style="color:var(--dim)">NO SAMPLE</b>
+    </div>
+    <div class="metric">
+      <span>daemon</span>
+      <b id="daemonState" style="font-size:12px;color:var(--dim)"><i class="dot off"></i>offline</b>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input type="text" id="pathInput" placeholder="輸入 PE 路徑（支援多個，以 ; 分隔）或把檔案拖進視窗…" spellcheck="false">
+    <button id="scanBtn">掃描</button>
+    <input type="text" id="rulesInput" placeholder="YARA 規則檔（選填）" spellcheck="false">
+    <button class="ghost" id="clearBtn">清空</button>
+  </div>
+
+  <div id="samples"></div>
+
+  <div class="grid" id="grid">
+    <section class="panel">
+      <h2>◤ PE 區段與熵值矩陣 <span class="tag" id="q1tag"></span>
+        <span class="right"><span class="flag" id="q1flag"></span></span>
+      </h2>
+      <div class="body" id="q1"><div class="empty">尚未載入樣本。<b>拖曳 .exe / .dll</b> 進視窗，或在上方輸入路徑。</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>◤ MITRE ATT&amp;CK 攻擊鏈 <span class="tag" id="q2tag"></span>
+        <span class="right"><span class="flag" id="q2flag"></span></span>
+      </h2>
+      <div class="body" id="q2"><div class="empty">等待分析結果…</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>◤ 威脅獵捕與 IOC 網格 <span class="tag" id="q3tag"></span></h2>
+      <div class="body" id="q3"><div class="empty">等待分析結果…</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>◤ 報告中樞與原始封包流 <span class="tag" id="q4tag"></span></h2>
+      <div class="actions">
+        <button class="magenta" id="expSarif">匯出 SARIF 2.1.0</button>
+        <button class="magenta" id="expHtml">匯出 HTML 報告</button>
+        <button class="ghost" id="expJson">複製 JSON</button>
+      </div>
+      <div class="drawer">
+        <h4>▸ nim ↔ python stdio ipc 封包流</h4>
+        <pre id="rawlog"></pre>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="drop"><div class="box">DROP PE ARTIFACTS TO ANALYZE</div></div>
+
+<script>
+"use strict";
+/* Mirrors mitre_engine.KILL_CHAIN_ORDER; extras act as a fallback ordering. */
+const PHASE_ORDER = ["Reconnaissance","Weaponization","Delivery","Exploitation","Installation",
+  "Command and Control","Actions on Objectives",
+  "Execution","Persistence","Privilege Escalation","Defense Evasion","Credential Access",
+  "Discovery","Lateral Movement","Collection","Exfiltration","Impact","Unknown"];
+const phaseRank = (p) => { const i = PHASE_ORDER.indexOf(p); return i < 0 ? PHASE_ORDER.length : i; };
+const HIGH_RISK = new Set(["createremotethread","virtualallocex","writeprocessmemory","createthread",
+  "loadlibrarya","getprocaddress","virtualprotect","ntunmapviewofsection","queueuserapc",
+  "setwindowshookexa","setwindowshookexw","createremotethreadex","ntcreatethreadex",
+  "writeprocessmemoryex","virtualalloc","internetopenurla","internetopenurlw","shellexecutea",
+  "shellexecutew","winexec","createtoolhelp32snapshot","process32first","process32next"]);
+const WARN_RISK = new Set(["regsetvalueexa","regcreatekeyexa","createservicea","createservicew",
+  "system","copyfilea","movefilea","deletefilea","isdebuggerpresent","getsysteminfo",
+  "createmutexa","createmutexw","sleep","getcomputernamea","gethostname"]);
+
+const state = { samples: [], active: -1, dlg: 0 };
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v == null ? "" : v)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const base = (p) => String(p || "").replace(/\\/g,"/").split("/").pop();
+const api = (p) => String(p || "").split(".").pop().toLowerCase();
+
+/* ---------------- raw IPC drawer ---------------- */
+function logRaw(dir, text){
+  const el = $("rawlog");
+  const cls = dir === "tx" ? "tx" : dir === "er" ? "er" : "rx";
+  const arrow = dir === "tx" ? "▶ TX" : dir === "er" ? "✖ ERR" : "◀ RX";
+  const t = new Date().toLocaleTimeString();
+  el.insertAdjacentHTML("beforeend", `<span class="${cls}">[${t}] ${arrow} ${esc(text)}</span>\n`);
+  el.scrollTop = el.scrollHeight;
+  state.dlg++;
+  $("q4tag").textContent = state.dlg + " pkts";
+}
+
+/* ---------------- health ---------------- */
+async function pollHealth(){
+  try{
+    const r = await fetch("/api/health");
+    const j = await r.json();
+    $("daemonState").innerHTML = j.ok
+      ? '<i class="dot on"></i>online'
+      : '<i class="dot off"></i>offline';
+  }catch(e){
+    $("daemonState").innerHTML = '<i class="dot off"></i>offline';
+  }
+}
+
+/* ---------------- scan ---------------- */
+async function scanPaths(paths){
+  if(!paths.length) return;
+  setBusy(true);
+  logRaw("tx", JSON.stringify({file_path: paths.length === 1 ? paths[0] : paths}));
+  try{
+    const r = await fetch("/api/scan", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({paths})
+    });
+    const records = await r.json();
+    records.forEach(addSample);
+  }catch(e){
+    logRaw("er", String(e));
+  }finally{
+    setBusy(false);
+  }
+}
+
+async function uploadFiles(files){
+  setBusy(true);
+  for(const f of files){
+    try{
+      logRaw("tx", `upload ${f.name} (${f.size} bytes)`);
+      const r = await fetch("/api/upload?name=" + encodeURIComponent(f.name),
+        {method:"POST", headers:{"Content-Type":"application/octet-stream"}, body:f});
+      const rec = await r.json();
+      addSample(rec);
+    }catch(e){
+      logRaw("er", `${f.name}: ${e}`);
+    }
+  }
+  setBusy(false);
+}
+
+function addSample(rec){
+  if(rec && rec.file_path){
+    const i = state.samples.findIndex(s => s.file_path === rec.file_path);
+    if(i >= 0) state.samples[i] = rec; else state.samples.push(rec);
+    state.active = state.samples.findIndex(s => s.file_path === rec.file_path);
+  }
+  logRaw("rx", JSON.stringify(rec).slice(0, 900));
+  render();
+}
+
+function setBusy(on){
+  ["scanBtn"].forEach(id => { const b = $(id); if(b) b.disabled = on; });
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  renderTabs();
+  const s = state.samples[state.active];
+  if(!s){
+    $("riskScore").textContent = "—";
+    $("threatLabel").textContent = "NO SAMPLE";
+    $("q1").innerHTML = '<div class="empty">尚未載入樣本。<b>拖曳 .exe / .dll</b> 進視窗，或在上方輸入路徑。</div>';
+    $("q2").innerHTML = '<div class="empty">等待分析結果…</div>';
+    $("q3").innerHTML = '<div class="empty">等待分析結果…</div>';
+    $("q1tag").textContent = ""; $("q2tag").textContent = ""; $("q3tag").textContent = "";
+    $("q1flag").textContent = ""; $("q2flag").textContent = "";
+    return;
+  }
+  if(s.status && s.status !== "ok"){
+    const msg = s.error || s.status;
+    $("riskScore").textContent = "ERR";
+    $("threatLabel").textContent = "ANALYSIS FAILED";
+    $("q1").innerHTML = `<div class="empty" style="color:var(--red)">✖ ${esc(msg)}</div>`;
+    $("q2").innerHTML = `<div class="empty">—</div>`;
+    $("q3").innerHTML = `<div class="empty">—</div>`;
+    return;
+  }
+  renderEntropy(s);
+  renderKillChain(s);
+  renderHunting(s);
+  renderHeader(s);
+}
+
+function renderHeader(s){
+  const a = s.analysis || {};
+  const score = typeof a.risk_score === "number" ? a.risk_score : null;
+  $("riskScore").textContent = score == null ? "—" : score.toFixed(3);
+  $("riskScore").style.color = score == null ? "var(--dim)"
+    : score >= .65 ? "var(--red)" : score >= .35 ? "var(--amber)" : "var(--green)";
+  const label = (a.tactical_summary && a.tactical_summary.threat_label) || "Inconclusive";
+  $("threatLabel").textContent = String(label).toUpperCase();
+  $("threatLabel").style.color = score != null && score >= .65 ? "var(--red)"
+    : score != null && score >= .35 ? "var(--amber)" : "var(--green)";
+}
+
+function renderTabs(){
+  const el = $("samples");
+  if(!state.samples.length){ el.innerHTML = ""; return; }
+  el.innerHTML = state.samples.map((s, i) => {
+    const sc = s.analysis && typeof s.analysis.risk_score === "number" ? s.analysis.risk_score : null;
+    const cls = sc == null ? "" : sc >= .65 ? "crit" : sc >= .35 ? "high" : "mid";
+    const pill = sc == null ? (s.status === "ok" ? "?" : "ERR") : sc.toFixed(2);
+    return `<div class="tab ${cls} ${i === state.active ? "active" : ""}" data-i="${i}">
+      <span>${esc(base(s.file_path))}</span><span class="pill">${pill}</span>
+      <span class="x" data-x="${i}">×</span></div>`;
+  }).join("");
+}
+
+/* -------- Q1 entropy -------- */
+function renderEntropy(s){
+  const secs = s.sections || [];
+  if(!secs.length){ $("q1").innerHTML = '<div class="empty">此樣本沒有可解析的區段。</div>'; return; }
+  const hot = secs.filter(x => (x.entropy || 0) >= 7.2).length;
+  $("q1tag").textContent = `${secs.length} 區段 / ${s.architecture || "?"}`;
+  $("q1flag").textContent = hot ? `⚠ ${hot} 個疑似加殼或加密區段` : "";
+  const maxEnt = 8;
+  $("q1").innerHTML =
+    `<div class="ttl">content fingerprint&nbsp; <span style="color:var(--cyan)">${esc(s.content_hash || "n/a")}</span>
+       &nbsp;·&nbsp; 熵值 ≥ 7.2 視為高度壓縮或加密</div>` +
+    secs.map(sec => {
+      const e = Number(sec.entropy) || 0;
+      const pct = Math.max(1.5, Math.min(100, e / maxEnt * 100));
+      const row = e >= 7.2 ? "danger" : e >= 6.0 ? "warn" : "";
+      return `<div class="ent-row ${row}">
+        <span class="ent-name" title="${esc(sec.name)}">${esc(sec.name)}</span>
+        <div class="ent-track"><div class="ent-fill" style="width:${pct}%"></div></div>
+        <span class="ent-val">${e.toFixed(3)}${e >= 7.2 ? " ⚠" : ""}</span>
+      </div>`;
+    }).join("");
+}
+
+/* -------- Q2 kill chain -------- */
+function renderKillChain(s){
+  const a = s.analysis || {};
+  const chain = a.kill_chain || {};
+  const ttps = a.mitre_ttps || [];
+  if(!ttps.length){
+    $("q2tag").textContent = "0 TTP";
+    $("q2flag").textContent = "";
+    $("q2").innerHTML = '<div class="empty">未對應到 MITRE ATT&amp;CK 技術。<br>匯入的 API 未命中已知攻擊樣式。</div>';
+    return;
+  }
+  $("q2tag").textContent = ttps.length + " TTP";
+  const sum = a.tactical_summary || {};
+  const phases = (sum.kill_chain_phases && sum.kill_chain_phases.length)
+    ? sum.kill_chain_phases.slice().sort((x,y)=>phaseRank(x)-phaseRank(y))
+    : Object.keys(chain).sort((x,y)=>phaseRank(x)-phaseRank(y));
+
+  let html = "";
+  if(sum.summary_text) html += `<div class="ttl">${esc(sum.summary_text)}</div>`;
+  for(const ph of phases){
+    const items = chain[ph] || [];
+    if(!items.length) continue;
+    html += `<div class="phase"><h4>${esc(ph)}</h4><div class="badges">` +
+      items.map(t => {
+        const cf = typeof t.confidence === "number" ? t.confidence : 0;
+        const hot = cf >= .7 || /Injection|Hook|Remote|Persistence/i.test(t.technique_name || "");
+        return `<span class="badge ${hot ? "hot" : ""}" title="${esc(t.description || "")}">
+          <span class="id">${esc(t.technique_id || "?")}</span>
+          <span>${esc(t.technique_name || "?")}</span>
+          <span class="cf">${cf.toFixed(2)}</span></span>`;
+      }).join("") + `</div></div>`;
+  }
+  $("q2").innerHTML = html || '<div class="empty">無攻擊鏈資料。</div>';
+}
+
+/* -------- Q3 hunting + IOC -------- */
+let IMPORT_CACHE = { list: [], q: "" };
+function renderHunting(s){
+  const imports = s.imports || [];
+  const iocs = s.iocs || [];
+  IMPORT_CACHE.list = imports;
+  $("q3tag").textContent = `${imports.length} API / ${iocs.length} IOC`;
+
+  const iocHtml = iocs.length ? `<div class="ioc-grid">` + iocs.map(i => {
+    const kind = classifyIOC(i);
+    return `<div class="ioc"><span class="kind">${kind}</span>
+      <span class="val" title="${esc(i)}">${esc(i)}</span>
+      <span class="cp" data-copy="${esc(i)}" title="複製">⧉</span></div>`;
+  }).join("") + `</div>` : `<div class="empty" style="padding:10px">未擷取到硬編碼 IOC（IP / URL / PDB / 敏感字串）。</div>`;
+
+  $("q3").innerHTML = `
+    <div class="searchbar">
+      <input type="text" id="apiSearch" placeholder="過濾 API 匯入（例如 remote、crypt、net）…" spellcheck="false">
+      <span class="flag" id="apiCount"></span>
+    </div>
+    <div id="apiTableWrap"></div>
+    <div class="sub-h">◤ 擷取到的 IOC 指標</div>
+    ${iocHtml}
+    ${renderFamily(s)}
+  `;
+  renderApiTable("");
+  const si = $("apiSearch");
+  si.value = IMPORT_CACHE.q;
+  si.addEventListener("input", e => { IMPORT_CACHE.q = e.target.value; renderApiTable(e.target.value); });
+}
+
+function renderApiTable(q){
+  const query = (q || "").toLowerCase();
+  const rows = IMPORT_CACHE.list.filter(n => !query || n.toLowerCase().includes(query));
+  const wrap = $("apiTableWrap");
+  if(!wrap) return;
+  if(!IMPORT_CACHE.list.length){
+    wrap.innerHTML = '<div class="empty" style="padding:12px">此樣本沒有匯入表。</div>';
+    const c = $("apiCount"); if(c) c.textContent = "";
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr><th>DLL</th><th>函式</th><th>風險</th></tr></thead><tbody>` +
+    rows.map(n => {
+      const fn = api(n);
+      const dll = String(n).split(".").slice(0, -1).join(".") || "—";
+      const cls = HIGH_RISK.has(fn) ? "risk" : WARN_RISK.has(fn) ? "warn" : "";
+      const tag = cls === "risk" ? "HIGH" : cls === "warn" ? "WATCH" : "—";
+      return `<tr class="${cls}"><td>${esc(dll)}</td><td>${esc(n)}</td><td>${tag}</td></tr>`;
+    }).join("") + `</tbody></table>`;
+  const c = $("apiCount");
+  if(c) c.textContent = `${rows.length} / ${IMPORT_CACHE.list.length} 顯示`;
+}
+
+function renderFamily(s){
+  const fc = (s.analysis && s.analysis.family_correlation) || {};
+  if(!fc || !fc.similar) return "";
+  const hint = fc.attribution_hint || fc.family || "similar sample seen";
+  return `<div class="sub-h">◤ 基因歸因</div>
+    <div class="ioc" style="border-color:rgba(34,211,238,.3);background:rgba(34,211,238,.07)">
+      <span class="kind" style="color:var(--cyan);border-color:rgba(34,211,238,.3)">FAMILY</span>
+      <span class="val">${esc(hint)}</span></div>`;
+}
+
+function classifyIOC(v){
+  const s = String(v);
+  if(/^https?:\/\//i.test(s)) return "URL";
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(s)) return "IPv4";
+  if(/\.pdb/i.test(s)) return "PDB";
+  if(/^[A-Za-z]:\\/.test(s) || /^\\\\/.test(s)) return "PATH";
+  return "STR";
+}
+
+/* ---------------- export ---------------- */
+async function exportAs(fmt){
+  const s = state.samples[state.active];
+  if(!s){ logRaw("er", "沒有可匯出的樣本"); return; }
+  logRaw("tx", `export ${fmt} :: ${s.file_path}`);
+  try{
+    const r = await fetch("/api/export", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({path: s.file_path, format: fmt})
+    });
+    if(!r.ok){ logRaw("er", "export failed: HTTP " + r.status); return; }
+    const blob = await r.blob();
+    const name = base(s.file_path).replace(/\.[^.]+$/, "");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name + (fmt === "sarif" ? ".sarif" : fmt === "html" ? ".report.html" : ".json");
+    a.click();
+    URL.revokeObjectURL(url);
+    logRaw("rx", "export ok → " + a.download);
+  }catch(e){ logRaw("er", String(e)); }
+}
+
+/* ---------------- events ---------------- */
+$("scanBtn").addEventListener("click", () => {
+  const raw = $("pathInput").value.trim();
+  if(!raw) return;
+  const paths = raw.split(";").map(x => x.trim().replace(/^"|"$/g, "")).filter(Boolean);
+  scanPaths(paths);
+});
+$("pathInput").addEventListener("keydown", e => { if(e.key === "Enter") $("scanBtn").click(); });
+$("clearBtn").addEventListener("click", () => {
+  state.samples = []; state.active = -1; $("rawlog").innerHTML = "";
+  state.dlg = 0; $("q4tag").textContent = ""; render();
+});
+$("samples").addEventListener("click", e => {
+  const x = e.target.closest("[data-x]");
+  if(x){ state.samples.splice(Number(x.dataset.x), 1); if(state.active >= state.samples.length) state.active = state.samples.length - 1; render(); return; }
+  const t = e.target.closest("[data-i]");
+  if(t){ state.active = Number(t.dataset.i); render(); }
+});
+$("q3").addEventListener("click", e => {
+  const c = e.target.closest("[data-copy]");
+  if(c){ navigator.clipboard.writeText(c.dataset.copy); c.textContent = "✓"; setTimeout(() => c.textContent = "⧉", 900); }
+});
+$("expSarif").addEventListener("click", () => exportAs("sarif"));
+$("expHtml").addEventListener("click", () => exportAs("html"));
+$("expJson").addEventListener("click", async () => {
+  const s = state.samples[state.active];
+  if(!s) return;
+  await navigator.clipboard.writeText(JSON.stringify(s, null, 2));
+  logRaw("rx", "JSON 已複製到剪貼簿");
+});
+
+/* drag & drop */
+let dragDepth = 0;
+window.addEventListener("dragenter", e => { e.preventDefault(); dragDepth++; $("drop").classList.add("on"); });
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("dragleave", e => { dragDepth--; if(dragDepth <= 0){ dragDepth = 0; $("drop").classList.remove("on"); } });
+window.addEventListener("drop", e => {
+  e.preventDefault(); dragDepth = 0; $("drop").classList.remove("on");
+  const files = Array.from(e.dataTransfer.files || []);
+  if(files.length) uploadFiles(files);
+});
+
+/* boot */
+render();
+pollHealth();
+setInterval(pollHealth, 4000);
+fetch("/api/health").then(r => r.json()).then(j => {
+  if(j.pending){ $("pathInput").value = j.pending; scanPaths([j.pending]); }
+}).catch(()=>{});
+</script>
+</body>
+</html>

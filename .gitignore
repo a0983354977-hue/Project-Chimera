@@ -1,0 +1,33 @@
+# Compiled binaries and native build artifacts
+*.exe
+*.dll
+*.obj
+*.o
+*.pdb
+nimcache/
+
+# Local Python environments and caches
+venv/
+.venv/
+python_runtime/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local databases and their journal files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.devin/config.local.json
+
+# Generated reports and test artifacts
+/report.html
+/test_report.html
